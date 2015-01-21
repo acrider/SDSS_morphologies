@@ -13,7 +13,8 @@ from scipy import interpolate
 from SDSS_dark_gain import *
 
 get_dir  = os.path.dirname(os.path.abspath(__file__)) # directory of the script being run
-get_file = get_dir + '/frame-g-006005-2-0199.fits'
+get_file = get_dir + '/frame-g-006005-2-0199.fits' # NGC 4713 Spiral 
+#get_file = get_dir + '/frame-g-005318-5-0041.fits' # NGC 4526 Elliptical 
 
 # These data were pulled manually from various SDSS websites (see above).
 galaxy_RA  = 192.491112046059 # degrees
@@ -39,8 +40,7 @@ ugriz      = FITS_file[0].header['FILTER']  # ugriz filter
 run        = FITS_file[0].header['RUN']     # run
 gain, dark_var = SDSS_gain_dark(camcol, ugriz, run)
 
-nmgy        = FITS_file[0].header['NMGY']  # nMaggy per count
-frame_image = FITS_file[0].data.transpose() / nmgy
+frame_image = FITS_file[0].data.transpose()
 
 # Create SKY and CALIBRATION images.
 # http://data.sdss3.org/datamodel/files/BOSS_PHOTOOBJ/frames/RERUN/RUN/CAMCOL/frame.html
@@ -54,7 +54,6 @@ yinterp    = yinterp[:,0]
 
 sky_function = interpolate.interp2d(np.arange(allsky.shape[1]), np.arange(allsky.shape[0]), allsky, kind='linear')
 sky_image    = sky_function(yinterp, xinterp) # in counts
-#plt.imshow(sky_image, cmap='gray', norm=LogNorm())
 
 calib     = FITS_file[1].data #  nanomaggies per count
 calib_image = np.empty_like(frame_image)
@@ -65,7 +64,8 @@ for i in np.arange(calib_image.shape[1]):
 FITS_file.close()
 
 # Calculate the error in the frame image for use fitting algorithms later.
-dn_image        = frame_image / calib_image + sky_image
+dn_image        = frame_image / calib_image + sky_image # counts
+
 dn_err_image    = np.sqrt(dn_image / gain + dark_var)
 frame_image_err = dn_err_image * calib_image
 
@@ -97,8 +97,22 @@ plt.subplot(144) # 1 down, 4 across,  3rd plot
 plt.title('Original Image (in counts)')
 plt.imshow(dn_image, norm=LogNorm())
 
+
 plt.figure(2) # second window
 plt.imshow(galaxy_image, cmap='gray', norm=LogNorm())
+
+old_header = FITS_file[0].header
+new_header      = old_header
+new_header['RA']   = galaxy_RA
+new_header['DEC']  = galaxy_DEC
+# STILL NEED TO CHANGE FITS HEADER COMMENTS FOR THESE
+
+hdu1 = pyfits.PrimaryHDU(galaxy_image,header=new_header)
+hdu2 = pyfits.ImageHDU(sky_image[xmin:xmax,ymin:ymax],name='SKY_IMAGE')
+hdu3 = pyfits.ImageHDU(calib_image[xmin:xmax,ymin:ymax],name='CALIB_IMAGE')
+
+hdulist = pyfits.HDUList([hdu1,hdu2,hdu3])
+hdulist.writeto(get_dir + '/galaxy_stamp.fits',clobber=True)
 
 plt.show()
 
