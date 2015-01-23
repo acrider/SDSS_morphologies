@@ -3,36 +3,70 @@
 #  http://skyserver.sdss.org/public/en/tools/quicklook/quicksummary.aspx?id=0x112d177540c70060&spec=0x0d3c8b097a006800
 #  http://skyserver.sdss.org/public/en/tools/explore/Summary.aspx?plate=847&mjd=52426&fiber=556
 
+def galaxy_XY(galaxy_RA, galaxy_DEC, FITS_header):
+
+    # These values allow translation from RA,DEC to X,Y and vice versa.
+    crpix1 = FITS_header['CRPIX1'] #   X of reference pixel
+    crpix2 = FITS_header['CRPIX2'] #   Y of reference pixel
+    crval1 = FITS_header['CRVAL1'] #  RA of reference pixel
+    crval2 = FITS_header['CRVAL2'] # DEC of reference pixel
+    cd1_1  = FITS_header['CD1_1']  #  RA deg per column pixel
+    cd1_2  = FITS_header['CD1_2']  #  RA deg per row pixel
+    cd2_1  = FITS_header['CD2_1']  # DEC deg per column pixel
+    cd2_2  = FITS_header['CD2_2']  # DEC deg per row pixel
+    
+    # OLD, OVERSIMPLIFIED WAY - Find the X,Y values of the galaxy's RA and DEC.
+    # galaxy_X = crpix1 + (galaxy_RA  - crval1) / cd1_1 # I've temporarily left out the cd2_1 and cd1_2 components since they're small.
+    # galaxy_Y = crpix2 + (galaxy_DEC - crval2) / cd2_2
+    
+    # BETTER WAY - Find the X,Y values of the galaxy's RA and DEC.
+    # http://www.sdss3.org/svn/repo/idlutils/tags/v5_5_5/goddard/pro/astrom/ad2xy.pro
+    
+    cd = np.array([[cd1_1, cd1_2], [cd2_1, cd2_2]])
+    inv_cd = inv(cd)
+    
+    xsi = galaxy_RA  - crval1
+    eta = galaxy_DEC - crval2
+    
+    xdif = xsi * inv_cd[0,0] + eta * inv_cd[0,1]
+    ydif = xsi * inv_cd[1,0] + eta * inv_cd[1,1]
+    
+    galaxy_X = crpix1 + xdif
+    galaxy_Y = crpix2 + ydif
+
+    return galaxy_X, galaxy_Y
+
+import os
 import pyfits
 import numpy as np
-import os
 import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
 from scipy import interpolate
+from numpy.linalg import inv
 
 from SDSS_dark_gain import *
 
 get_dir  = os.path.dirname(os.path.abspath(__file__)) # directory of the script being run
-get_file = get_dir + '/frame-g-006005-2-0199.fits' # NGC 4713 Spiral 
-#get_file = get_dir + '/frame-g-005318-5-0041.fits' # NGC 4526 Elliptical 
 
 # These data were pulled manually from various SDSS websites (see above).
+get_file = get_dir + '/frame-g-006005-2-0199.fits' # NGC 4713 Spiral 
 galaxy_RA  = 192.491112046059 # degrees
 galaxy_DEC = 5.31141005442379 # degrees
 galaxy_PetroRad = 53.92 # arcsec
 
+# These data were pulled manually from various SDSS websites (see above).
+get_file = get_dir + '/frame-g-005318-5-0041.fits' # NGC 5332 Elliptical 
+galaxy_RA  = 208.0330958 # degrees
+galaxy_DEC = 16.9698778 # degrees
+galaxy_PetroRad = 18.83 / 4 # arcsec
+
 # Open the FITS file.
 FITS_file = pyfits.open(get_file)
 
-# These values allow translation from RA,DEC to X,Y and vice versa.
-crpix1 = FITS_file[0].header['CRPIX1'] #   X of reference pixel
-crpix2 = FITS_file[0].header['CRPIX2'] #   Y of reference pixel
-crval1 = FITS_file[0].header['CRVAL1'] #  RA of reference pixel
-crval2 = FITS_file[0].header['CRVAL2'] # DEC of reference pixel
-cd1_1  = FITS_file[0].header['CD1_1']  #  RA deg per column pixel
-cd1_2  = FITS_file[0].header['CD1_2']  #  RA deg per row pixel
-cd2_1  = FITS_file[0].header['CD2_1']  # DEC deg per column pixel
-cd2_2  = FITS_file[0].header['CD2_2']  # DEC deg per row pixel
+# Get X, Y
+galaxy_X, galaxy_Y = galaxy_XY(galaxy_RA, galaxy_DEC, FITS_file[0].header)
+# This needs to be fixed!!
+galaxy_R = galaxy_PetroRad / 3600.0 / abs(FITS_file[0].header['CD1_1'])
 
 # Determine the gain (electrons/count) and dark variance from the CAMCOL, FILTER, and RUN
 camcol     = FITS_file[0].header['CAMCOL']  # camcol
@@ -69,19 +103,6 @@ dn_image        = frame_image / calib_image + sky_image # counts
 dn_err_image    = np.sqrt(dn_image / gain + dark_var)
 frame_image_err = dn_err_image * calib_image
 
-# Find the X,Y values of the galaxy's RA and DEC.
-galaxy_X = crpix1 + (galaxy_RA - crval1) / cd1_1 # I've temporarily left out the cd2_1 and cd1_2 components since they're small.
-galaxy_Y = crpix2 + (galaxy_DEC - crval2) / cd2_2
-galaxy_R = galaxy_PetroRad / 3600.0 / abs(cd1_1)
-
-# Extract a small box around the galaxy.
-boxsize = int(galaxy_R * 2.0 * 1.5)
-xmin = int(galaxy_X-boxsize/2)  
-xmax = xmin+boxsize-1
-ymin = int(galaxy_Y-boxsize/2)
-ymax = ymin+boxsize-1
-galaxy_image = frame_image[xmin:xmax,ymin:ymax] # Why did I have to switch these from image_full[xmin:xmax,ymin:ymax]?
-
 # Make a plot to show the processed, background, calibration, and original images. And also the galaxy.
 plt.figure(1) # first window
 plt.subplot(141) # 1 down, 4 across, 1st plot
@@ -96,6 +117,18 @@ plt.imshow(calib_image, norm=LogNorm())
 plt.subplot(144) # 1 down, 4 across,  3rd plot
 plt.title('Original Image (in counts)')
 plt.imshow(dn_image, norm=LogNorm())
+plt.show()
+
+
+
+# Extract a small box around the galaxy.
+boxsize = int(galaxy_R * 2.0 * 1.5)
+xmin = int(galaxy_X-boxsize/2)  
+xmax = xmin+boxsize-1
+ymin = int(galaxy_Y-boxsize/2)
+ymax = ymin+boxsize-1
+galaxy_image = frame_image[xmin:xmax,ymin:ymax] # Why did I have to switch these from image_full[xmin:xmax,ymin:ymax]?
+
 
 
 plt.figure(2) # second window
