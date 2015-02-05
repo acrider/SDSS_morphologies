@@ -11,30 +11,41 @@ def galaxy_XY(galaxy_RA, galaxy_DEC, FITS_header):
         print 'CTYPE2 = ', FITS_header['CTYPE2'] 
 
     # These values allow translation from RA,DEC to X,Y and vice versa.
-    crpix1 = FITS_header['CRPIX1'] #   X of reference pixel
-    crpix2 = FITS_header['CRPIX2'] #   Y of reference pixel
+    crpix1 = FITS_header['CRPIX1'] - 1 #   X of reference pixel
+    crpix2 = FITS_header['CRPIX2'] - 1 #   Y of reference pixel
     crval1 = FITS_header['CRVAL1'] #  RA of reference pixel
     crval2 = FITS_header['CRVAL2'] # DEC of reference pixel
     cd1_1  = FITS_header['CD1_1']  #  RA deg per column pixel
     cd1_2  = FITS_header['CD1_2']  #  RA deg per row pixel
     cd2_1  = FITS_header['CD2_1']  # DEC deg per column pixel
     cd2_2  = FITS_header['CD2_2']  # DEC deg per row pixel
-    
+        
     # Find the X,Y values of the galaxy's RA and DEC.
-    # http://www.sdss3.org/svn/repo/idlutils/tags/v5_5_5/goddard/pro/astrom/ad2xy.pro
+    # http://apsis.googlecode.com/svn/tags/apsis-4.2.5/python/xydrizzle/wcsutil.py
     
-    cd = np.array([[cd1_1, cd1_2], [cd2_1, cd2_2]])
-    inv_cd = inv(cd)
+    det = cd1_1 * cd2_2 - cd1_2 * cd2_1
     
-    xsi = galaxy_RA  - crval1
-    eta = galaxy_DEC - crval2
+    cdinv11 =  cd2_2 / det
+    cdinv12 = -cd1_2 / det
+    cdinv21 = -cd2_1 / det
+    cdinv22 =  cd1_1 / det
     
-    xdif = xsi * inv_cd[0,0] + eta * inv_cd[1,0]
-    ydif = xsi * inv_cd[0,1] + eta * inv_cd[1,1]
+    ra0  = crval1     / 180.0 * np.pi
+    dec0 = crval2     / 180.0 * np.pi
+    ra   = galaxy_RA  / 180.0 * np.pi
+    dec  = galaxy_DEC / 180.0 * np.pi   
     
-    galaxy_X = crpix1 + xdif
-    galaxy_Y = crpix2 + ydif
-
+    bottom = np.sin(dec)*np.sin(dec0) + np.cos(dec)*np.cos(dec0)*np.cos(ra-ra0)
+    
+    xi = np.cos(dec) * np.sin(ra-ra0) / bottom
+    eta = (np.sin(dec)*np.cos(dec0) - np.cos(dec)*np.sin(dec0)*np.cos(ra-ra0)) / bottom
+    
+    xi  = xi  * 180.0 / np.pi
+    eta = eta * 180.0 / np.pi 
+    
+    galaxy_X = cdinv11 * xi + cdinv12 * eta + crpix1
+    galaxy_Y = cdinv21 * xi + cdinv22 * eta + crpix2
+        
     return galaxy_X, galaxy_Y
 
 import os
@@ -52,15 +63,6 @@ get_dir  = os.path.dirname(os.path.abspath(__file__)) # directory of the script 
 # These data were pulled manually from various SDSS websites (see above).
 # The last one listed is the only one processed.
 
-get_file = get_dir + '/FITS/frame-g-005318-5-0041.fits' # NGC 5332 Elliptical 
-galaxy_RA  = 208.0330958 # degrees
-galaxy_RA  = 208.03306607885125 # degrees (DR10)
-galaxy_RA  = 208.033124163444 # degrees
-galaxy_DEC = 16.9698778 # degrees
-galaxy_DEC = 16.96966554374892 # degrees (DR10)
-galaxy_DEC = 16.9697210993127 # degrees
-galaxy_PetroRad = 18.83 / 4 # arcsec
-
 get_file = get_dir + '/FITS/frame-g-004671-5-0033.fits ' # Arp 220 Irregular
 galaxy_RA  = 233.7384333 # degrees DR12
 galaxy_RA  = 233.738358970269  # DR10 Quick Look
@@ -73,10 +75,28 @@ galaxy_RA  = 229.10909 # degrees DR12
 galaxy_DEC = 0.11875 # degrees
 galaxy_PetroRad = 3.54 # arcsec
 
+
+get_file = get_dir + '/FITS/frame-r-004671-5-0033.fits ' # Arp 220 Irregular
+galaxy_RA  = 233.7384333 # degrees DR12
+galaxy_RA  = 233.738358970269  # DR10 Quick Look
+galaxy_DEC = 23.503225 # degrees
+galaxy_DEC = 23.5036786094887 # DR10 Quick Look
+galaxy_PetroRad = 27.24  / 1.5 # arcsec
+
 get_file = get_dir + '/FITS/frame-r-006005-2-0199.fits' # NGC 4713 Spiral 
 galaxy_RA  = 192.491112046059 # degrees
 galaxy_DEC = 5.31141005442379 # degrees
 galaxy_PetroRad = 53.92 # arcsec
+
+get_file = get_dir + '/FITS/frame-r-005318-5-0041.fits' # NGC 5332 Elliptical 
+galaxy_RA  = 208.0330958 # degrees
+galaxy_RA  = 208.03306607885125 # degrees (DR10)
+galaxy_RA  = 208.03312 # degrees (DR10 Explore)
+galaxy_DEC = 16.9698778 # degrees
+galaxy_DEC = 16.96966554374892 # degrees (DR10)
+galaxy_DEC = 16.96972 # degrees (DR10 Explore)
+galaxy_PetroRad = 18.83 /2 # arcsec
+
 
 # Open the FITS file.
 FITS_file = pyfits.open(get_file)
@@ -149,8 +169,8 @@ galaxy_image = frame_image[xmin:xmax,ymin:ymax] # Why did I have to switch these
 
 plt.figure(2) # second window
 plt.imshow(galaxy_image, cmap='gray', interpolation='none')
-plt.axhline(galaxy_image.shape[0]/2, color='k')
-plt.axvline(galaxy_image.shape[1]/2, color='k')
+plt.axhline(galaxy_image.shape[0]/2, color='g')
+plt.axvline(galaxy_image.shape[1]/2, color='g')
 
 old_header = FITS_file[0].header
 new_header      = old_header

@@ -35,9 +35,9 @@ def concentration(image):
     r80 = r[np.argmin(counts <= 0.8 * c100)]
     r20 = r[np.argmin(counts <= 0.2 * c100)]
     
-    print 'Petrosian radius = ', pr, 'pixels'
-    print 'r80 radius = ', r80, 'pixels'
-    print 'r20 radius = ', r20, 'pixels'
+    #print 'Petrosian radius = ', pr, 'pixels'
+    #print 'r80 radius = ', r80, 'pixels'
+    #print 'r20 radius = ', r20, 'pixels'
 
     #plt.plot(r, counts, 'b-')
     #plt.xlabel('radius (in pixels)')
