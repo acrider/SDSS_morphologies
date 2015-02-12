@@ -3,10 +3,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # These data were pulled manually from various SDSS websites (see above).
-get_file = '/Users/acrider/FITS/nsa_v0_1_2.fits' # from http://nsatlas.org/data
+nsa_file = '/Users/acrider/FITS/NSA/nsa_v0_1_2.fits' # from http://nsatlas.org/data
 
 # Open the FITS file and read in the table data.
-hdulist = pyfits.open(get_file)
+hdulist = pyfits.open(nsa_file)
 tbdata  = hdulist[1].data
 
 # Calculate the x and y values using line rations for the BPT diagram.

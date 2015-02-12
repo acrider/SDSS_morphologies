@@ -48,8 +48,15 @@ def concentration(image):
     
     lx, ly = image.shape
     
+    mask_image = np.copy(image)
+    lx, ly = mask_image.shape
+    X, Y = np.ogrid[0:lx, 0:ly]
+
+    mask = (X - lx / 2) ** 2 + (Y - ly / 2) ** 2 > (1.5*pr)**2
+    mask_image[mask] = 0
+    
     # Show plot of data used to calculate assymetry
-    plt.imshow(image, cmap='gray_r', norm=LogNorm(), interpolation='none')
+    plt.imshow(mask_image, cmap='gray_r', norm=LogNorm(vmin=0.01), interpolation='none')
     plt.axhline(lx/2., color='g')
     plt.axvline(lx/2., color='g')
     circle1 = plt.Circle((lx/2.,ly/2.), radius=r20, color='g', fill=False)
@@ -68,6 +75,7 @@ def assymetry(image):
     mask_image = np.copy(image)
     lx, ly = mask_image.shape
     X, Y = np.ogrid[0:lx, 0:ly]
+
     mask = (X - lx / 2) ** 2 + (Y - ly / 2) ** 2 > (1.5*pr)**2
     mask_image[mask] = 0
     mask_image_180 = np.rot90(mask_image,2) # Rotate 180 degrees.
@@ -92,14 +100,28 @@ def clumpiness(image):
     X, Y = np.ogrid[0:lx, 0:ly]
 
     #Convolve image with a 2D boxcar the size of the 1/4 Petrosian radius.
-    boxcar_kernel  = Box2DKernel(0.25 * pr, mode='center')
-    smoothed_image = convolve(copy_image, boxcar_kernel)
+    smoothing_kernel  = Box2DKernel(0.25 * pr)
+    #smoothing_kernel  = Gaussian2DKernel(0.25 * pr)
+
+    smoothed_image = convolve(copy_image, smoothing_kernel)
 
     # See Equation 11 for clumpiness from Lotz, Primack, and Madua (2004)
     clump_image = copy_image - smoothed_image
-    
+    #clump_image = clump_image * (np.sign(clump_image)+1)/2# From p. 11 of Conselice (?)
+
     #background_clump_image = np.copy(clump_image)
    
+    # Show plot of data used to calculate assymetry
+    plt.imshow(smoothed_image, cmap='gray_r', interpolation='none')
+    plt.axhline(lx/2., color='g')
+    plt.axvline(lx/2., color='g')
+    circle1 = plt.Circle((lx/2.,ly/2.), radius=1.50*pr, color='g', fill=False)
+    circle2 = plt.Circle((lx/2.,ly/2.), radius=0.25*pr, color='g', fill=False)
+    plt.gca().add_patch(circle1)
+    plt.gca().add_patch(circle2)
+
+    plt.show()
+    
     mask1 = (X - lx / 2) ** 2 + (Y - ly / 2) ** 2 > (1.50*pr)**2
     mask2 = (X - lx / 2) ** 2 + (Y - ly / 2) ** 2 < (0.25*pr)**2
     
@@ -108,19 +130,6 @@ def clumpiness(image):
     copy_image[mask1] = 0
     copy_image[mask2] = 0
     
-    # Show plot of data used to calculate assymetry
-    plt.imshow(clump_image, cmap='gray_r',interpolation='none')
-    plt.axhline(lx/2., color='g')
-    plt.axvline(lx/2., color='g')
-    circle1 = plt.Circle((lx/2.,ly/2.), radius=1.50*pr, color='g', fill=False)
-    circle2 = plt.Circle((lx/2.,ly/2.), radius=0.25*pr, color='g', fill=False)
-    plt.gca().add_patch(circle1)
-    plt.gca().add_patch(circle2)
-
-
-    plt.show()
-    
-    #galaxy_clumpiness =  clump_image[clump_image>0].sum() / image[image>0].sum()
     galaxy_clumpiness = np.sum(abs(clump_image)) / np.sum(abs(copy_image))
  
     # Use background annulus of 2 to 2.5 Petrosian radii
@@ -143,8 +152,9 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 import pyfits
-from astropy.convolution import convolve, Tophat2DKernel, Box2DKernel
-from matplotlib.colors import LogNorm
+from astropy.convolution import convolve, Tophat2DKernel, Box2DKernel, Gaussian2DKernel
+from matplotlib.colors import LogNorm, Normalize
+
 
 main_dir  = os.path.dirname(os.path.abspath(__file__)) # directory of the script being run
 sample_file = main_dir + '/galaxy_stamp.fits'
