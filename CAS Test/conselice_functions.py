@@ -69,8 +69,26 @@ def concentration(image):
     # Compactness = 5.0 * np.log10(r80/r20) from Bershady< Jangren, & Conselice 2000
     # print c100, r80, r20
     return 5 * np.log10(float(r80)/float(r20))
+
+def asymmetry_min(image):
     
-def assymetry(image):
+    Nx, Ny = image.shape
+    
+    xoff = 5
+    yoff = 5
+    
+    A_matrix = np.zeros((xoff,yoff))
+    
+    for dy in np.arange(yoff):
+        for dx in np.arange(xoff):
+            A_matrix[dx,dy] = asymmetry(image[dx:Nx-xoff+dx+1,dy:Ny-yoff+dy+1])
+            #A_matrix[dx,dy] = asymmetry(image[dx:Nx+1,dy:Ny+1])
+
+            # print dx, dy, A_matrix[dx,dy]
+            
+    return np.min(A_matrix) 
+            
+def asymmetry(image):
     pr, counts = petrosian_radius(image)
     mask_image = np.copy(image)
     lx, ly = mask_image.shape
@@ -85,11 +103,33 @@ def assymetry(image):
     plt.axhline(lx/2., color='g')
     plt.axvline(lx/2., color='g')
     circle1 = plt.Circle((lx/2.,ly/2.), radius=1.50*pr, color='g', fill=False)
+    circle2 = plt.Circle((lx/2.,ly/2.), radius=2.00*pr, color='r', fill=False)
+    circle3 = plt.Circle((lx/2.,ly/2.), radius=2.50*pr, color='r', fill=False)
     plt.gca().add_patch(circle1)
-    plt.show()
+    plt.gca().add_patch(circle2)
+    plt.gca().add_patch(circle3)
 
-    assymetry = 0.5 * np.sum(np.abs(mask_image - mask_image_180)) / np.sum(mask_image)
-    return assymetry
+    # Use background annulus of 2 to 2.5 Petrosian radii (same area as r=1.5)
+    background_image       = np.copy(image)
+    mask3 = (X - lx / 2) ** 2 + (Y - ly / 2) ** 2 > (2.5*pr)**2
+    mask4 = (X - lx / 2) ** 2 + (Y - ly / 2) ** 2 < (2.0*pr)**2
+    background_image[mask3] = 0
+    background_image[mask4] = 0
+    background_image_180 = np.rot90(background_image,2)
+    
+    npixels_galaxy     = image.size - np.sum(mask)
+    npixels_background = image.size - np.sum(mask3) - np.sum(mask4)
+    
+    bg = np.sum(np.abs(background_image - background_image_180))
+    #print bg, npixels_galaxy, npixels_background
+
+    bg = bg * npixels_galaxy / npixels_background
+    
+    # Old version had 0.5 in it. Why?!?    
+    # asymmetry = 0.5 * np.sum(np.abs(mask_image - mask_image_180)) / np.sum(mask_image)
+    asymmetry = (np.sum(np.abs(mask_image - mask_image_180)) - bg) / np.sum(mask_image)
+
+    return asymmetry
 
 def clumpiness(image):
     
@@ -165,6 +205,6 @@ plt.figure(3) # first window
 plt.subplot(131) # 1 down, 3 across, 1st plot
 print 'Concentration (C) = ', concentration(image)
 plt.subplot(132) # 1 down, 3 across, 1st plot
-print 'Assymetry     (A) = ', assymetry(image)
+print 'Asymmetry     (A) = ', asymmetry_min(image)
 plt.subplot(133) # 1 down, 3 across, 1st plot
 print 'Clumpiness    (S) = ', clumpiness(image)

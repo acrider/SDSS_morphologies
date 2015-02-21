@@ -68,6 +68,12 @@ galaxy_RA  = 229.10909 # degrees DR12
 galaxy_DEC = 0.11875 # degrees
 galaxy_PetroRad = 3.54 # arcsec
 
+
+get_file = get_dir + '/FITS/frame-r-006005-2-0199.fits' # NGC 4713 Spiral 
+galaxy_RA  = 192.491112046059 # degrees
+galaxy_DEC = 5.31141005442379 # degrees
+galaxy_PetroRad = 53.92 # arcsec
+
 get_file = get_dir + '/FITS/frame-r-005318-5-0041.fits' # NGC 5332 Elliptical 
 galaxy_RA  = 208.0330958 # degrees
 galaxy_RA  = 208.03306607885125 # degrees (DR10)
@@ -75,19 +81,15 @@ galaxy_RA  = 208.03312 # degrees (DR10 Explore)
 galaxy_DEC = 16.9698778 # degrees
 galaxy_DEC = 16.96966554374892 # degrees (DR10)
 galaxy_DEC = 16.96972 # degrees (DR10 Explore)
-galaxy_PetroRad = 18.83 /2 # arcsec
+galaxy_PetroRad = 18.83 # arcsec
+
 
 get_file = get_dir + '/FITS/frame-r-004671-5-0033.fits ' # Arp 220 Irregular
 galaxy_RA  = 233.7384333 # degrees DR12
 galaxy_RA  = 233.738358970269  # DR10 Quick Look
 galaxy_DEC = 23.503225 # degrees
 galaxy_DEC = 23.5036786094887 # DR10 Quick Look
-galaxy_PetroRad = 27.24  / 1.5 # arcsec
-
-get_file = get_dir + '/FITS/frame-r-006005-2-0199.fits' # NGC 4713 Spiral 
-galaxy_RA  = 192.491112046059 # degrees
-galaxy_DEC = 5.31141005442379 # degrees
-galaxy_PetroRad = 53.92 # arcsec
+galaxy_PetroRad = 27.24  # arcsec
 
 # Open the FITS file.
 FITS_file = pyfits.open(get_file)
