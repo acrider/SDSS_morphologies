@@ -1,0 +1,17 @@
+SELECT TOP 10000
+  galSpecLine.specObjID, dr7p.objid,
+  galSpecLine.oiii_5007_flux, galSpecLine.h_beta_flux, 
+  galSpecLine.nii_6584_flux, galSpecLine.h_alpha_flux,
+  gz.elliptical, (gz.spiralclock + gz.spiralanticlock + edgeon) AS spiral, 
+  (gz.dontknow + gz.merger) AS other,
+  dr7p.u, dr7p.g, dr7p.r, dr7p.i, dr7p.z, dr7p.petroRadErr_r, dr10s.z as redshift from allLines as galSpecLine
+INNER JOIN convertObjID as c
+  ON c.specObjID = galSpecLine.specObjID
+INNER JOIN MyZooVotes as gz
+  ON gz.dr7objid = c.dr7ObjID
+INNER JOIN DR7.PhotoObjAll as dr7p
+  ON dr7p.objID = c.dr7ObjID
+INNER JOIN DR10.SpecObjALL as dr10s
+  ON c.specObjID = dr10s.specObjID
+WHERE dr10s.z > 0.10
+    and dr10s.z < 0.12
