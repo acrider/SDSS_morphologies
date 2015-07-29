@@ -61,7 +61,7 @@ A_array = np.zeros(nUnique)
 S_array = np.zeros(nUnique)
 
 # Set a few other things...
-FITS_directory = '/Users/acrider/FITS/DR10/'
+FITS_directory = '/Volumes/My Book for Mac/FITS/DR10/'
 ugriz = 'g'
 #ugriz = 'r'
 #ugriz = 'i' # GUNZIP FIRST!
@@ -86,7 +86,6 @@ for i in xrange(0,20): # Use this to test that things work.
     n_plot_counter = 1
     #plt.suptitle('SDSS ' + str(objid), fontsize=24)
 
-        
     for ugriz in filters:
         
         # ...so you can name the FIT file...    
